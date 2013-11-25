@@ -1,7 +1,7 @@
 (function() {
-  
-var base_url = 'http://' + location.host.replace(':'+PLUGIN_CONFIGS.BASE.port, ':'+PLUGIN_CONFIGS.VIDEO.port)
-  
+
+var base_url = 'http://' + location.host.split(':')[0] +':'+PLUGIN_CONFIGS.VIDEO.port;
+
 function clabel(cnt, cls) {
   return $('<span class="label label-'+cls+' ml10">'+cnt+'</span>');
 }

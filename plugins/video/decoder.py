@@ -22,7 +22,19 @@ def set_stats(path, st):
 def sha1(path):
     sig = r.hget('plugin:'+path, 'video:signature')
     if sig == None or sig == '':
-        p = subprocess.Popen(['shasum', CONFIG['STORAGE']+path], stdout=subprocess.PIPE, shell=False)
+        fullpath = CONFIG['STORAGE']+path
+        s = ''
+        p = subprocess.Popen(['head', '-c', '1kB', fullpath], stdout=subprocess.PIPE)
+        p.wait()
+        s += p.stdout.read()
+        p = subprocess.Popen(['tail', '-c', '1kB', fullpath], stdout=subprocess.PIPE)
+        p.wait()
+        s += p.stdout.read()
+        s += '<lenght:%d>' % os.path.getsize(fullpath)
+        
+        p = subprocess.Popen(['shasum', '-'],stdin=subprocess.PIPE , stdout=subprocess.PIPE)
+        p.stdin.write(s)
+        p.stdin.close()
         p.wait()
         result = re.findall("[0-9a-fA-F]{40}",p.stdout.read())
         
@@ -66,7 +78,10 @@ def decode_video(path):
     final_m3u8 = wd+'v.m3u8'
     if not os.path.exists(final_m3u8):
         fake_m3u8 = wd+'fake.m3u8'
-        fake_ts = touch_dir(wd+'fake_ts','%08d.ts')
+        if os.path.exists('/dev/shm'):
+            fake_ts = touch_dir('/dev/shm/fake_ts','%08d.ts')
+        else:
+            fake_ts = touch_dir(wd+'fake_ts','%08d.ts')
         
         p = subprocess.Popen([ffmpeg,'-v','quiet','-y','-i',tar_fullpath,'-vcodec','copy','-vbsf','h264_mp4toannexb','-map','0:%d'%video,
             '-f','ssegment','-segment_time','120','-segment_format','mpegts','-segment_list',fake_m3u8,'-segment_list_size','9999',
@@ -100,3 +115,8 @@ def start():
         path = r.lpop('plugin_video_queue')
         if path:
             decode_video(path)
+
+if __name__ == '__main__':
+    CONFIG = {'CACHE':'', 'STORAGE':''}
+    init()
+    print sha1('/root/TF/ts/lion_king.mkv')

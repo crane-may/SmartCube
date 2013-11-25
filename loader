@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-import bottle, sys, daemon, os
+import bottle, sys, daemon, os, subprocess
 import web_server.server
 import plugins.video.app_server
 import plugins.video.decoder
@@ -42,7 +42,11 @@ if '-c' in sys.argv:
     exit(0)
 
 if '-k' in sys.argv:
-    os.system("ps aux | grep loader.py | grep -v grep | awk '{print $2}' | xargs kill")
+    os.system("ps aux | grep loader | grep -v grep | awk '{print $2}' | xargs kill")
+    exit(0)
+    
+if '-s' in sys.argv:
+    os.system("ps aux | grep loader | grep -v 'grep\\|-s'")
     exit(0)
 
 if '-d' in sys.argv:
