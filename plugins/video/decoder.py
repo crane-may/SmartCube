@@ -1,10 +1,14 @@
 import os, json, subprocess, time, redis, re
 
-STORAGE = '/Users/claire/Desktop/WirelessStorage/storage'
-CACHE = '/Users/claire/Desktop/WirelessStorage/apps/video/cache'
+CONFIG = None
+CACHE = None
+r = None
+ffmpeg = 'ffmpeg'
 
-r = redis.StrictRedis(host='localhost', port=6379, db=0)
-ffmpeg = '/Users/claire/Desktop/ffmpeg'
+def init():
+    global CACHE, r
+    CACHE = CONFIG['ROOT']+'/plugins/video/cache'
+    r = redis.StrictRedis(host='localhost', port=6379, db=0)
 
 def touch_dir(p, file=''):
     if not os.path.exists(p):
@@ -18,7 +22,7 @@ def set_stats(path, st):
 def sha1(path):
     sig = r.hget('plugin:'+path, 'video:signature')
     if sig == None or sig == '':
-        p = subprocess.Popen(['shasum', STORAGE+path], stdout=subprocess.PIPE, shell=False)
+        p = subprocess.Popen(['shasum', CONFIG['STORAGE']+path], stdout=subprocess.PIPE, shell=False)
         p.wait()
         result = re.findall("[0-9a-fA-F]{40}",p.stdout.read())
         
@@ -38,10 +42,9 @@ def count_ts(path):
             ts+=1
     f.close()
     return ts
-            
 
 def decode_video(path):
-    tar_fullpath = STORAGE+path
+    tar_fullpath = CONFIG['STORAGE']+path
     info = json.loads(r.hget('plugin:'+path, 'video:info'))
     print path, info
     video = -1
@@ -89,12 +92,11 @@ def decode_video(path):
         p.wait()
         
     set_stats(path,'5')
-        
-
+    
 # decode_video('/video/need4speed.mkv')
-
-while True:
-    time.sleep(1)
-    path = r.lpop('plugin_video_queue')
-    if path:
-        decode_video(path)
+def start():    
+    while True:
+        time.sleep(1)
+        path = r.lpop('plugin_video_queue')
+        if path:
+            decode_video(path)

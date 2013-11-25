@@ -1,9 +1,5 @@
-from bottle import get, post, request, run, static_file, abort, response, redirect
+from bottle import Bottle, get, post, request, run, static_file, abort, response, redirect
 import os, json, subprocess, time, redis, re
-
-STORAGE = '/Users/claire/Desktop/WirelessStorage/storage'
-APPS = '/Users/claire/Desktop/WirelessStorage/apps'
-CACHE = '/Users/claire/Desktop/WirelessStorage/apps/video/cache'
 
 # video:stats
 # 0: not process
@@ -13,7 +9,21 @@ CACHE = '/Users/claire/Desktop/WirelessStorage/apps/video/cache'
 # 4: decoding
 # 5: done
 
-r = redis.StrictRedis(host='localhost', port=6379, db=0)
+app = Bottle()
+CACHE = None
+r = None
+PORT = None
+
+def init():
+    global CACHE, r, PORT
+    r = redis.StrictRedis(host='localhost', port=6379, db=0)
+    CACHE = app.config['ROOT']+'/plugins/video/cache'
+    f = open(app.config['ROOT']+'/plugins/video/config.js')
+    PORT = json.loads(f.read())['port']
+    f.close()
+    if not os.path.exists(CACHE):
+        os.makedirs(CACHE)
+    
 
 def filter(d, keylist):
     if type(d) == dict:
@@ -32,41 +42,39 @@ def filter(d, keylist):
 #   video:stats
 #   video:info
 
-@get('/INFO/<path:path>')
+@app.get('/INFO/<path:path>')
 def doInfo(path = ''):
-    p = subprocess.Popen(['ffprobe','-v','quiet','-print_format','json','-show_format','-show_streams',STORAGE+os.sep+path], stdout=subprocess.PIPE, shell=False)
+    path = '/'+path
+    p = subprocess.Popen(['ffprobe','-v','quiet','-print_format','json','-show_format','-show_streams',app.config['STORAGE']+path], stdout=subprocess.PIPE, shell=False)
     p.wait()
     result = json.loads(p.stdout.read())
     filter(result, ['streams','index','codec_name','codec_type','width','height','tags','language','format','format_name','duration'])
-    r.hset('plugin:/'+path, 'video:stats', '1')
-    r.hset('plugin:/'+path, 'video:info', json.dumps(result))
-    
+    r.hset('plugin:'+path, 'video:stats', '1')
+    r.hset('plugin:'+path, 'video:info', json.dumps(result))
     return "location.reload();"
-    
 
 # plugin_video_queue
-
-@get('/DECODE/<path:path>')
+@app.get('/DECODE/<path:path>')
 def doDecode(path = ''):
-    stats = r.hget('plugin:/'+path, 'video:stats')
+    path = '/'+path
+    stats = r.hget('plugin:'+path, 'video:stats')
     if stats == '1':
-        r.hset('plugin:/'+path, 'video:stats', '2')
-        r.lpush('plugin_video_queue', '/'+path)
-    
+        r.hset('plugin:'+path, 'video:stats', '2')
+        r.lpush('plugin_video_queue', path)
     return "location.reload();"
 
-
-@get('/PLAY/<path:path>')
+@app.get('/PLAY/<path:path>')
 def doPlay(path = ''):
-    fullpath = CACHE+os.sep+path
-    wk = CACHE+os.sep+path.split('/')[0] + os.sep
+    path = '/'+path
+    fullpath = CACHE+path
+    wk = CACHE+'/'+path.split('/')[1]
     
     if path.endswith('vsub.m3u8') and not os.path.exists(fullpath):
-        srtfullpath = STORAGE + request.query.get('srt')
+        srtfullpath = app.config['STORAGE'] + request.query.get('srt')
         if os.path.exists(srtfullpath):
             lasttimeline = ''
             
-            vtt = wk +'sub.vtt'
+            vtt = wk +'/sub.vtt'
             if not os.path.exists(vtt):
                 fin = open(srtfullpath)
                 fout = open(vtt, 'w')
@@ -80,7 +88,7 @@ def doPlay(path = ''):
                 fout.close()
                 fin.close()
             
-            sub_m3u8 = wk + 'sub.m3u8'
+            sub_m3u8 = wk + '/sub.m3u8'
             if not os.path.exists(sub_m3u8):
                 times = re.search('\d+:\d+:\d+[,.]\d+\s+-[ -]>\s+(\d+):(\d+):(\d+)[,.]\d+\s*',lasttimeline)
                 if times:
@@ -94,7 +102,7 @@ def doPlay(path = ''):
                     fout.close()
     
     if path.endswith('.ts'):
-        real_m3u8 = wk + os.sep +'real.m3u8'
+        real_m3u8 = wk +'/real.m3u8'
         if os.path.exists(real_m3u8):
             filename = path.split('/')[-1]
             
@@ -112,6 +120,3 @@ def doPlay(path = ''):
             return static_file(path, root=CACHE)
             
     abort(404, "not found file")
-
-
-run(host='0.0.0.0', port=8081)

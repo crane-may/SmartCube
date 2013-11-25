@@ -1,85 +1,80 @@
-from bottle import get, post, request, run, static_file, abort, response, redirect
+from bottle import Bottle, get, post, request, run, static_file, abort, response, redirect
 import os, json, subprocess, time, redis
 
-ROOT = '/Users/claire/Desktop/WirelessStorage/web_server'
-STORAGE = '/Users/claire/Desktop/WirelessStorage/storage'
-APPS = '/Users/claire/Desktop/WirelessStorage/apps'
-PORT = 8080
+app = Bottle()
+r = None
+PLUGINS = None
+WEB = None
+PLUGIN_CONFIGS = None
 
-PLUGIN_CONFIGS = {'BASE':{'port':PORT}}
-for app in os.listdir(APPS):
-    p = APPS+os.sep+app+os.sep+"config.js"
-    if os.path.exists(p):
-        f = open(p)
-        dic = json.loads(f.read())
-        PLUGIN_CONFIGS[dic['name']] = dic
-        f.close()
+def init():
+    global r, PLUGINS, WEB, PLUGIN_CONFIGS
+    r = redis.StrictRedis(host='localhost', port=6379, db=0)
+    WEB = app.config['ROOT']+'/web_server'
+    PLUGINS = app.config['ROOT']+'/plugins'
+    
+    plugin_configs = {'BASE':{'port':app.config['PORT']}}
+    for plugin in os.listdir(PLUGINS):
+        p = PLUGINS+'/'+plugin+"/config.js"
+        if os.path.exists(p):
+            f = open(p)
+            dic = json.loads(f.read())
+            plugin_configs[dic['name']] = dic
+            f.close()
+    PLUGIN_CONFIGS = plugin_configs
 
-r = redis.StrictRedis(host='localhost', port=6379, db=0)
-
-@get('/')
+@app.get('/')
 def index(name=''):
-    return static_file('index.html', root=ROOT)
+    return static_file('index.html', root=WEB)
 
-@get('/PLUGIN/all.js')
+@app.get('/PLUGIN/all.js')
 def doPlugin():
     ret = ""
-    for app in os.listdir(APPS):
-        p = APPS+os.sep+app+os.sep+"plugin.js"
+    for plugin in os.listdir(PLUGINS):
+        p = PLUGINS+'/'+plugin+"/plugin.js"
         if os.path.exists(p):
             f = open(p)
             ret += f.read()
             f.close()
-            
     ret = 'var PLUGIN_CONFIGS = '+json.dumps(PLUGIN_CONFIGS)+';' + ret
     return ret
 
-@get('/STATIC/<path:path>')
+@app.get('/STATIC/<path:path>')
 def doStatic(path = ''):
-    return static_file(path, root=ROOT)
+    return static_file(path, root=WEB)
 
-@get('/GET/')
-@get('/GET/<path:path>')
+@app.get('/GET/')
+@app.get('/GET/<path:path>')
 def doGet(path = ''):
-    fullp = STORAGE+os.sep+path
+    fullp = app.config['STORAGE']+'/'+path
     if os.path.exists(fullp) :
         if os.path.isdir(fullp):
             ret = []
             for nm in os.listdir(fullp):
                 o = {}
                 o["name"] = nm
-                o["isDir"] = os.path.isdir(fullp+os.sep+nm)
+                o["isDir"] = os.path.isdir(fullp+'/'+nm)
                 if o["isDir"]:
                     o["size"] = 0
                 else:
-                    o["size"] = os.path.getsize(fullp+os.sep+nm)
-                    o["plugin"] = r.hgetall("plugin:/"+path+os.sep+nm)
+                    o["size"] = os.path.getsize(fullp+'/'+nm)
+                    o["plugin"] = r.hgetall("plugin:/"+path+'/'+nm)
                 ret.append(o)
                 
             response.content_type = 'application/json; charset=utf8'
             return json.dumps({"result":ret})
         else:
-            return static_file(path, root=STORAGE)
+            return static_file(path, root=app.config['STORAGE'])
     else :
         abort(404, "not found file or director")
 
 
-@get('/PLUGIN/<name>/<path:path>')
-def doPlugin(name = '', path = ''):
-    if PLUGIN_CONFIGS.has_key(name):
-        h = request.headers.get("Host").replace(":8080", ":%d"%PLUGIN_CONFIGS[name]["port"])
-        redirect('http://'+h+'/'+path)
-
-
-
 #################################################################
 
-@post('/POST/<path:path>')
+@app.post('/POST/<path:path>')
 def doPost(path = ''):
     pass
 
-@get('/DELETE/<path:path>')
+@app.get('/DELETE/<path:path>')
 def doDelete(path = ''):
     pass
-
-run(host='0.0.0.0', port=PORT)
