@@ -17,7 +17,7 @@ PORT = None
 def init():
     global CACHE, r, PORT
     r = redis.StrictRedis(host='localhost', port=6379, db=0)
-    CACHE = app.config['ROOT']+'/plugins/video/cache'
+    CACHE = app.config['CACHE']
     f = open(app.config['ROOT']+'/plugins/video/config.js')
     PORT = json.loads(f.read())['port']
     f.close()

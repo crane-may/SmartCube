@@ -1,3 +1,5 @@
+#!/usr/bin/python
+
 import bottle, sys, daemon, os
 import web_server.server
 import plugins.video.app_server
@@ -18,20 +20,29 @@ def runit():
     if op['run'] == 'web':
         web_server.server.app.config.update(config)
         web_server.server.init()
-        bottle.run(web_server.server.app, port = config['PORT'])
+        bottle.run(web_server.server.app, host = '0.0.0.0', port = config['PORT'])
     
     if op['run'] == 'video':
         plugins.video.app_server.app.config.update(config)
         plugins.video.app_server.init()
-        bottle.run(plugins.video.app_server.app, port = plugins.video.app_server.PORT)
+        bottle.run(plugins.video.app_server.app, host = '0.0.0.0', port = plugins.video.app_server.PORT)
         
     if op['run'] == 'decoder':
         plugins.video.decoder.CONFIG = config
         plugins.video.decoder.init()
         plugins.video.decoder.start()
 
+if '-c' in sys.argv:
+    print 'flushall redis ?'
+    raw_input()
+    os.system('redis-cli flushall')
+    print 'delete '+config['CACHE']+'/* ?'
+    raw_input()
+    os.system('rm -rf '+config['CACHE']+'/*')
+    exit(0)
+
 if '-k' in sys.argv:
-    os.system("ps aux | grep loader.py | grep -v grep | gawk '{print $2}' | xargs kill")
+    os.system("ps aux | grep loader.py | grep -v grep | awk '{print $2}' | xargs kill")
     exit(0)
 
 if '-d' in sys.argv:

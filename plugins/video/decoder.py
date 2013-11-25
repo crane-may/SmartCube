@@ -7,7 +7,7 @@ ffmpeg = 'ffmpeg'
 
 def init():
     global CACHE, r
-    CACHE = CONFIG['ROOT']+'/plugins/video/cache'
+    CACHE = CONFIG['CACHE']
     r = redis.StrictRedis(host='localhost', port=6379, db=0)
 
 def touch_dir(p, file=''):
