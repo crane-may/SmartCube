@@ -44,17 +44,17 @@ var video_decorate = function(tar, file) {
     var btn = $(' <a class="btn btn-primary btn-sm ml10" href="'+base_url+'/PLAY/'+file.plugin['video:signature']+
                 '/v.m3u8'+'" target="_blank">播放</a>');
     tar.append(btn);
-    if (root_inode.sub(file.fullpath + '.srt')){
-      var btn = $(' <a class="btn btn-primary btn-sm ml10" href="'+base_url+'/PLAY/'+file.plugin['video:signature']+
-                  '/vsub.m3u8?srt='+decodeURIComponent(file.fullpath + '.srt')+'" target="_blank">带字幕播放</a>');
-      tar.append(btn);
-    }
+    // if (root_inode.sub(file.fullpath + '.srt')){
+    var btn = $(' <a class="btn btn-primary btn-sm ml10" href="'+base_url+'/PLAY/'+file.plugin['video:signature']+
+                '/vsub.m3u8?srt='+decodeURIComponent(file.fullpath + '.srt')+'" target="_blank">带字幕播放</a>');
+    tar.append(btn);
+    // }
   }
 }
 
 window.PLUGINS = window.PLUGINS || [];
 window.PLUGINS.push({
-  regex: /[.](mkv|mov)$/,
+  regex: /[.](mkv|mov|mp4)$/,
   inline_decorate: inline_decorate,
   decorate: video_decorate
 });

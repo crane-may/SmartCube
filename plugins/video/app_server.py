@@ -1,5 +1,5 @@
 from bottle import Bottle, get, post, request, run, static_file, abort, response, redirect
-import os, json, subprocess, time, redis, re
+import os, json, subprocess, time, redis, re, chardet
 
 # video:stats
 # 0: not process
@@ -77,14 +77,20 @@ def doPlay(path = ''):
             vtt = wk +'/sub.vtt'
             if not os.path.exists(vtt):
                 fin = open(srtfullpath)
-                fout = open(vtt, 'w')
+                subtitle = fin.read()
+                enc = chardet.detect(subtitle)['encoding']
+                if enc != 'utf-8':
+                    subtitle = subtitle.decode(enc).encode('utf-8')
+                fin.close()
                 
+                fout = open(vtt, 'w')
                 fout.write('WEBVTT\nX-TIMESTAMP-MAP=MPEGTS:0,LOCAL:00:00:00.000\n\n')
-                for l in fin:
+                
+                for l in re.split('\r?\n', subtitle):
                     if re.search('-[ -]>',l):
                         l = l.replace('- >','-->').replace(',','.')
                         lasttimeline = l
-                    fout.write(l)
+                    fout.write(l+"\n")
                 fout.close()
                 fin.close()
             
