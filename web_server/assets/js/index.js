@@ -28,6 +28,13 @@ fetch:function(op) {
   op.dataType = "json";
   op.contentType = "application/json; charset=utf-8";
   $.ajax(op);
+},
+
+size: function(sz) {
+  var sizestr = sz + "B";
+  if (sz > 1024*1024) sizestr = Math.floor(sz / 1024 / 1024) + "MB";
+  else if (sz > 1024) sizestr = Math.floor(sz / 1024) + "KB";
+  return sizestr;
 }
 
 }); 
@@ -65,63 +72,89 @@ inode.prototype.makedirs = function(path) {
   }
 }
 inode.prototype.loadsubs = function(arr) {
-  _.each(arr, function(p) {
+  _(arr).chain().sortBy(function(f) {
+    return (f.isDir ? 'd':'f') + f.name;
+  }).each(function(p) {
     var t = new inode(p, this);
   }, this);
 }
 inode.prototype.show = function() {
-  $("#file_list").empty();
-  _.each(this.subs, function(v) {
-    if (v.isDir){
-      $("#file_list").append('<a href="#'+v.fullpath+
-                        '" class="list-group-item"><span class="glyphicon glyphicon-folder-open mr10"></span><strong>'+
-                        v.name+' /</strong></a>')
-    }else{
-      var sizestr = v.size + "B";
-      if (v.size > 1024*1024) {
-        sizestr = Math.floor(v.size / 1024 / 1024) + "MB";
-      }else if (v.size > 1024) {
-        sizestr = Math.floor(v.size / 1024) + "KB";
+  window.cur_inode = this;
+  $('#bar_title').html(this.name);
+  $(".nav-ops li").show();
+  if (this == root_inode){
+    $("#rename_dialog_btn,#delete_btn").closest('li').hide();
+  }
+  
+  if (this.isDir){
+    $("#file_list").empty().show();
+    $("#file_info").hide();
+    _.each(this.subs, function(v) {
+      if (v.isHidden()){
+        return;
+      }else if (v.isDir){
+        $("#file_list").append('<a href="#'+v.fullpath+
+                          '" class="list-group-item"><span class="glyphicon glyphicon-folder-open mr10"></span><strong>'+
+                          v.name+' /</strong></a>')
+      }else{
+        var tar = $('<a href="#'+v.fullpath+
+                    '" class="list-group-item"><span class="glyphicon glyphicon-file mr10"></span>'+
+                    v.name+' <span class="label label-info ml10">'+$.size(v.size)+'</span></a>');
+        $("#file_list").append(tar);
+              
+        _.each(window.PLUGINS,function(plugin) {
+          if (plugin.regex.test(v.name)) plugin.inline_decorate(tar, v);
+        });
       }
-      
-      var tar = $('<div class="list-group-item"><span class="glyphicon glyphicon-file mr10"></span>'+
-                        v.name+'<span class="label label-info ml10">'+sizestr+'</span></div>');
-                        
-      $("#file_list").append(tar);
-      
-      _.each(window.PLUGINS,function(plugin) {
-        if (plugin.regex.test(v.name)) {
-          plugin.decorate(tar, v);
-        }
-      });
-    }
-  }, this);
+    }, this);    
+  }else{
+    $("#upload_dialog_btn,#create_dir_dialog_btn").closest('li').hide();
+    
+    $("#file_list").hide();
+    $("#file_info").show().find('.panel-body').html('<span class="label label-info">'+$.size(this.size)+'</span>');
+    
+    _.each(window.PLUGINS,function(plugin) {
+      if (plugin.regex.test(this.name)) plugin.decorate($("#file_info .panel-body"), this);
+    },this);
+  }
   
   var tar = $("#full_path").empty();
   var pp = this;
   while (pp){
-    if (pp == this) {
-      tar.prepend('<li class="active">'+pp.name+'</li>');
-    }else{
-      tar.prepend('<li><a href="#'+pp.fullpath+'">'+pp.name+'</a></li>');
-    }
+    if (pp == this) tar.prepend('<li class="active">'+pp.name+'</li>');
+    else tar.prepend('<li><a href="#'+pp.fullpath+'">'+pp.name+'</a></li>');
     pp = pp.parent;
   }
 }
+inode.prototype.isHidden = function() { return /^[.]/.test(this.name); }
+
 var root_inode = new inode({name:"root", size:0, isDir:true}, null);
 
 
 function on_hash_change() {
-  console.log("open" + location.hash);
+  console.log("open " + location.hash);
   var path = location.hash.replace(/^#/,"");
-  root_inode.makedirs(path)
-  var path_inode = root_inode.sub(path);
   
   $.fetch({
-    url: "/GET"+path,
+    url: "/LS"+path,
     success: function(result) {
-      path_inode.loadsubs(result);
-      path_inode.show();
+      // dir
+      if (_.isArray(result)) {
+        root_inode.makedirs(path)
+        var path_inode = root_inode.sub(path);
+        path_inode.loadsubs(result);
+        path_inode.show();
+      }
+      
+      // file
+      else if (_.isObject(result)){
+        var parent = path.replace(/\/[^/]+$/,'');
+        root_inode.makedirs(parent);
+        var parent_inode = root_inode.sub(parent);
+        
+        var cur = new inode(result, parent_inode);
+        cur.show();
+      }
     }
   })
 }
@@ -130,7 +163,43 @@ $(window).bind('hashchange', function() {
   on_hash_change();
 });
 
-if (! location.hash)
-  $.go("/");
-else
-  $.go(location.hash.replace(/^#/,""));
+$.go(location.hash ? location.hash.replace(/^#/,"") : "/");
+  
+  
+//////////////////////////////////////////////////////////////////
+
+$("#upload_dialog_btn").click(function() {
+  $("#upload_dialog").modal('show');
+});
+$("#create_dir_dialog_btn").click(function() {
+  $("#create_dir_name").val('');
+  $("#create_dir_dialog").modal('show');
+});
+$("#rename_dialog_btn").click(function() {
+  $("#rename_name").val(cur_inode.name);
+  $("#rename_dialog").modal('show');
+});
+
+
+$("#upload_btn").click(function() {
+  $("#upload_ref").val(location.href);
+  $("#upload_path").val(cur_inode.fullpath);
+  $("#upload_form").submit();
+});
+$("#create_dir_btn").click(function() {
+  $("#create_dir_ref").val(location.href);
+  $("#create_dir_path").val(cur_inode.fullpath);
+  $("#create_dir_form").submit();
+});
+$("#rename_btn").click(function() {
+  $("#rename_ref").val(location.href);
+  $("#rename_old_path").val(cur_inode.fullpath);
+  $("#rename_new_path").val(cur_inode.fullpath.replace(/\/[^\/]+$/,'') +'/'+ $("#rename_name").val());
+  $("#rename_form").submit();
+})
+
+$("#delete_btn").click(function() {
+  if (confirm("确定删除？")) {
+    $("#delete_form").attr("action", '/DELETE'+cur_inode.fullpath).submit();
+  }
+})

@@ -1,6 +1,6 @@
 config = {
-    'ROOT': '/root/SmartCube',
-    'STORAGE' : '/root/TF/cube/storage',
-    'CACHE' : '/root/TF/cube/cache',
-    'PORT' : 80
+    'ROOT': '/Users/crane/Documents/SmartCube',
+    'STORAGE' : '/Users/crane/Desktop/storage',
+    'CACHE' : '/Users/crane/Desktop/cache',
+    'PORT' : 8080
 }

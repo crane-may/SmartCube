@@ -1,5 +1,5 @@
 from bottle import Bottle, get, post, request, run, static_file, abort, response, redirect
-import os, json, subprocess, time, redis
+import os, json, subprocess, time, redis, re
 
 app = Bottle()
 r = None
@@ -43,38 +43,66 @@ def doPlugin():
 def doStatic(path = ''):
     return static_file(path, root=WEB)
 
-@app.get('/GET/')
-@app.get('/GET/<path:path>')
+def fileInfo(nm, fullpath, path):
+    o = {}
+    o["name"] = nm
+    o["isDir"] = os.path.isdir(fullpath)
+    if o["isDir"]:
+        o["size"] = 0
+    else:
+        o["size"] = os.path.getsize(fullpath)
+        o["plugin"] = r.hgetall("plugin:"+path)
+    return o
+
+@app.get('/LS/')
+@app.get('/LS/<path:path>')
 def doGet(path = ''):
-    fullp = app.config['STORAGE']+'/'+path
+    path = '/'+path
+    fullp = app.config['STORAGE']+path
     if os.path.exists(fullp) :
         if os.path.isdir(fullp):
             ret = []
             for nm in os.listdir(fullp):
-                o = {}
-                o["name"] = nm
-                o["isDir"] = os.path.isdir(fullp+'/'+nm)
-                if o["isDir"]:
-                    o["size"] = 0
-                else:
-                    o["size"] = os.path.getsize(fullp+'/'+nm)
-                    o["plugin"] = r.hgetall("plugin:/"+path+'/'+nm)
-                ret.append(o)
+                ret.append(fileInfo(nm, fullp+'/'+nm, path+'/'+nm))
                 
             response.content_type = 'application/json; charset=utf8'
             return json.dumps({"result":ret})
         else:
-            return static_file(path, root=app.config['STORAGE'])
+            response.content_type = 'application/json; charset=utf8'
+            return json.dumps({"result":fileInfo(path.split('/')[-1], fullp, path)})
     else :
         abort(404, "not found file or director")
 
 
 #################################################################
 
-@app.post('/POST/<path:path>')
-def doPost(path = ''):
-    pass
+@app.post('/POST')
+def doPost():
+    ref = request.forms.get('ref')
+    path = request.forms.get('path')
+    
+    if request.forms.get('isDir', False):
+        name = request.forms.get('name')
+        os.makedirs( app.config['STORAGE']+path+'/'+name )
+    else:
+        upload = request.files.get('upload')
+        with open(app.config['STORAGE']+path+'/'+upload.filename, 'wb') as open_file:
+            open_file.write(upload.file.read())
+    
+    redirect(ref)
 
-@app.get('/DELETE/<path:path>')
+@app.post('/MV')
+def doMv():
+    oldpath = request.forms.get('old')
+    newpath = request.forms.get('new')
+    os.rename(app.config['STORAGE']+oldpath, app.config['STORAGE']+newpath)
+    redirect('/#'+newpath)
+    
+@app.post('/DELETE/<path:path>')
 def doDelete(path = ''):
-    pass
+    path = '/'+path
+    if path.find('..') < 0:
+        os.system("rm -rf '"+app.config['STORAGE']+path+"'")
+    father = re.sub('/[^/]+$','',path)
+    redirect('/#'+father)
+    

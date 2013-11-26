@@ -3,7 +3,7 @@
 <head>
   <title>Wireless Storage</title>
   <meta content="text/html; charset=utf-8" http-equiv="content-type">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<meta content="width=device-width, minimum-scale=1.0, initial-scale=1.0, maximum-scale=1.0, user-scalable=1" name="viewport">
   <link href="/STATIC/assets/css/bootstrap.min.css" rel="stylesheet" media="screen">
   <style type="text/css" media="screen">
   .ml10 { margin-left:10px; }
@@ -11,9 +11,95 @@
   </style>
 </head>
 <body style="padding:20px;">
-  <ol class="breadcrumb" id="full_path">
-  </ol>
-  <div class="list-group" id="file_list">
+  <div class="modal fade" id="upload_dialog">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+          <h4 class="modal-title">上传文件</h4>
+        </div>
+        <div class="modal-body">
+          <form action="/POST" method="post" role="form" id="upload_form" enctype="multipart/form-data">
+            <div class="form-group">
+              <input type="hidden" name="ref" value="" id="upload_ref">
+              <input type="hidden" name="path" value="" id="upload_path">
+              <input type="file" name="upload" multiple="multiple">
+            </div>
+          </form>
+          <button type="button" class="btn btn-primary" id="upload_btn">点击开始上传</button>
+        </div>
+      </div><!-- /.modal-content -->
+    </div><!-- /.modal-dialog -->
+  </div><!-- /.modal -->
+  <div class="modal fade" id="create_dir_dialog">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+          <h4 class="modal-title">新建文件夹</h4>
+        </div>
+        <div class="modal-body">
+          <form action="/POST" method="post" role="form" id="create_dir_form" enctype="multipart/form-data">
+            <input type="hidden" name="ref" value="" id="create_dir_ref">
+            <input type="hidden" name="path" value="" id="create_dir_path">
+            <input type="hidden" name="isDir" value='1'>
+            <input type="text" class="form-control" placeholder="新建文件夹名" name="name" id="create_dir_name">
+            <br />
+          </form>
+          <button type="button" class="btn btn-primary" id="create_dir_btn">创建</button>
+        </div>
+      </div><!-- /.modal-content -->
+    </div><!-- /.modal-dialog -->
+  </div><!-- /.modal -->
+  <div class="modal fade" id="rename_dialog">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+          <h4 class="modal-title">重命名</h4>
+        </div>
+        <div class="modal-body">
+          <form action="/MV" method="post" role="form" id="rename_form" enctype="multipart/form-data">
+            <input type="hidden" name="ref" value="" id="rename_ref">
+            <input type="hidden" name="old" value="" id="rename_old_path">
+            <input type="hidden" name="new" value="" id="rename_new_path">
+            <input type="text" class="form-control" placeholder="文件名" id="rename_name">
+            <br />
+          </form>
+          <button type="button" class="btn btn-primary" id="rename_btn">确定</button>
+        </div>
+      </div><!-- /.modal-content -->
+    </div><!-- /.modal-dialog -->
+  </div><!-- /.modal -->
+  <div style="display:none;">
+    <form action="/DELETE" method="post" role="form" id="delete_form" enctype="multipart/form-data">
+      <input type="hidden" name="useless" value="useless">
+    </form>
+  </div>
+  
+  <nav class="navbar navbar-default" role="navigation">
+    <div class="navbar-header">
+      <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#navbar-collapse-1">
+        <span class="sr-only">Toggle navigation</span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </button>
+      <a class="navbar-brand" id="bar_title">Brand</a>
+    </div>
+    <div class="collapse navbar-collapse" id="navbar-collapse-1">
+      <ul class="nav navbar-nav navbar-right nav-ops">
+        <li><a href="javascript:;" id="upload_dialog_btn">上传</a></li>
+        <li><a href="javascript:;" id="create_dir_dialog_btn">新建文件夹</a></li>
+        <li><a href="javascript:;" id="rename_dialog_btn">重命名</a></li>
+        <li><a href="javascript:;" id="delete_btn">删除</a></li>
+      </ul>
+    </div>
+  </nav>
+  <ol class="breadcrumb" id="full_path"></ol>
+  <div class="list-group" id="file_list"></div>
+  <div class="panel panel-default" id="file_info">
+    <div class="panel-body"></div>
   </div>
   
   <script src="/STATIC/assets/js/jquery-1.10.2.min.js"></script>

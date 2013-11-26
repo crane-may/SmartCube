@@ -3,16 +3,19 @@
 var base_url = 'http://' + location.host.split(':')[0] +':'+PLUGIN_CONFIGS.VIDEO.port;
 
 function clabel(cnt, cls) {
-  return $('<span class="label label-'+cls+' ml10">'+cnt+'</span>');
+  return $(' <span class="label label-'+cls+' ml10">'+cnt+'</span>');
 }
 function cbutton(cnt, func) {
-  var tar = $('<button type="button" class="btn btn-default btn-sm ml10">'+cnt+'</button>');
+  var tar = $(' <button type="button" class="btn btn-default btn-sm ml10">'+cnt+'</button>');
   tar.click(func);
   return tar;
 }
 
-var video_decorate = function(tar, file) {
+var inline_decorate = function(tar, file) {
   $(".glyphicon", tar).removeClass("glyphicon-file").addClass("glyphicon-film");
+}
+
+var video_decorate = function(tar, file) {
   if (file.plugin["video:info"]) {
     var video_info = $.parseJSON(file.plugin["video:info"]);
     tar.append(clabel('时长: '+Math.floor(video_info.format.duration/60)+' 分钟', 'default'));
@@ -38,11 +41,11 @@ var video_decorate = function(tar, file) {
   else if (stats == '4' || stats == '5') {
     if (stats == '4') tar.append(clabel('转码中...', 'warning'));
     
-    var btn = $('<a class="btn btn-primary btn-sm ml10" href="'+base_url+'/PLAY/'+file.plugin['video:signature']+
+    var btn = $(' <a class="btn btn-primary btn-sm ml10" href="'+base_url+'/PLAY/'+file.plugin['video:signature']+
                 '/v.m3u8'+'" target="_blank">播放</a>');
     tar.append(btn);
     if (root_inode.sub(file.fullpath + '.srt')){
-      var btn = $('<a class="btn btn-primary btn-sm ml10" href="'+base_url+'/PLAY/'+file.plugin['video:signature']+
+      var btn = $(' <a class="btn btn-primary btn-sm ml10" href="'+base_url+'/PLAY/'+file.plugin['video:signature']+
                   '/vsub.m3u8?srt='+decodeURIComponent(file.fullpath + '.srt')+'" target="_blank">带字幕播放</a>');
       tar.append(btn);
     }
@@ -52,6 +55,7 @@ var video_decorate = function(tar, file) {
 window.PLUGINS = window.PLUGINS || [];
 window.PLUGINS.push({
   regex: /[.](mkv|mov)$/,
+  inline_decorate: inline_decorate,
   decorate: video_decorate
 });
 })();
