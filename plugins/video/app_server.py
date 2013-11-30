@@ -69,7 +69,7 @@ def doPlay(path = ''):
     fullpath = CACHE+path
     wk = CACHE+'/'+path.split('/')[1]
     
-    if path.endswith('vsub.m3u8') and not os.path.exists(fullpath):
+    if path.endswith('vsub.html') and not os.path.exists(fullpath):
         srtfullpath = app.config['STORAGE'] + request.query.get('srt')
         if os.path.exists(srtfullpath):
             lasttimeline = ''
@@ -95,6 +95,8 @@ def doPlay(path = ''):
                 fin.close()
             
             sub_m3u8 = wk + '/sub.m3u8'
+            vsub_m3u8 = wk + '/vsub.m3u8'
+            vsub_html = wk + '/vsub.html'
             if not os.path.exists(sub_m3u8):
                 times = re.search('\d+:\d+:\d+[,.]\d+\s+-[ -]>\s+(\d+):(\d+):(\d+)[,.]\d+\s*',lasttimeline)
                 if times:
@@ -103,9 +105,15 @@ def doPlay(path = ''):
                     fout.write('#EXTM3U\n#EXT-X-TARGETDURATION:%d\n#EXT-X-VERSION:3\n#EXT-X-MEDIA-SEQUENCE:1\n#EXTINF:%d.0,\nsub.vtt\n#EXT-X-ENDLIST'%(maxtime,maxtime))
                     fout.close()
             
-                    fout = open(fullpath, 'w')
+                    fout = open(vsub_m3u8, 'w')
                     fout.write('#EXTM3U\n#EXT-X-MEDIA:TYPE=SUBTITLES,GROUP-ID="subs",NAME="English",DEFAULT=YES,AUTOSELECT=YES,FORCED=NO,LANGUAGE="eng",URI="sub.m3u8"\n#EXT-X-STREAM-INF:PROGRAM-ID=1,BANDWIDTH=10000,SUBTITLES="subs"\nv.m3u8')
                     fout.close()
+                    
+                    fout = open(vsub_html, 'w')
+                    fout.write( '<!DOCTYPE html><html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en-us" lang="en-US"><head></head><body id="dtv">'+
+                                '<video controls width="480" height="270" preload="none"><source src="vsub.m3u8" type="application/vnd.apple.mpegurl" /></video></body>')
+                    fout.close()
+                    
     
     if path.endswith('.ts'):
         real_m3u8 = wk +'/real.m3u8'

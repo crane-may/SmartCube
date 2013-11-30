@@ -76,6 +76,7 @@ def decode_video(path):
     
     set_stats(path,'3')
     final_m3u8 = wd+'v.m3u8'
+    final_html = wd+'v.html'
     if not os.path.exists(final_m3u8):
         fake_m3u8 = wd+'fake.m3u8'
         if os.path.exists('/dev/shm'):
@@ -93,6 +94,11 @@ def decode_video(path):
         for l in fin:
             fout.write(re.sub('^/.*fake_','',l))
         fin.close()
+        fout.close()
+        
+        fout = open(final_html, 'w')
+        fout.write( '<!DOCTYPE html><html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en-us" lang="en-US"><head></head><body id="dtv">'+
+                    '<video controls width="480" height="270" preload="none"><source src="v.m3u8" type="application/vnd.apple.mpegurl" /></video></body>')
         fout.close()
     
     set_stats(path,'4')

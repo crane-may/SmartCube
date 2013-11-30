@@ -42,11 +42,11 @@ var video_decorate = function(tar, file) {
     if (stats == '4') tar.append(clabel('转码中...', 'warning'));
     
     var btn = $(' <a class="btn btn-primary btn-sm ml10" href="'+base_url+'/PLAY/'+file.plugin['video:signature']+
-                '/v.m3u8'+'" target="_blank">播放</a>');
+                '/v.html'+'" target="_blank">播放</a>');
     tar.append(btn);
     // if (root_inode.sub(file.fullpath + '.srt')){
     var btn = $(' <a class="btn btn-primary btn-sm ml10" href="'+base_url+'/PLAY/'+file.plugin['video:signature']+
-                '/vsub.m3u8?srt='+decodeURIComponent(file.fullpath + '.srt')+'" target="_blank">带字幕播放</a>');
+                '/vsub.html?srt='+decodeURIComponent(file.fullpath + '.srt')+'" target="_blank">带字幕播放</a>');
     tar.append(btn);
     // }
   }
